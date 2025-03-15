@@ -6,7 +6,7 @@
 /*   By: maxoph <maxoph@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/15 16:49:06 by maxoph           ###   ########.fr       */
+/*   Updated: 2025/03/15 18:32:29 by maxoph           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,14 +61,15 @@ void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 	if (dup2(pipex->pipe_fd[1], STDOUT_FILENO) == -1)
 		perror("dup2_stdout_child_one");
 	exctract_args_one(cmd, pipex);
-	find_cmd1_path(pipex->cmd1_args[0], env);
-	
-	
+	find_cmd1_path(pipex->cmd1_args[0], env, pipex);
 	
 }
-void find_cmd1_path(char *cmd1, char **env)
+void find_cmd1_path(char *cmd1, char **env, t_pipex *pipex)
 {
-	
+	if (ft_strchr(cmd1, '/') && access(cmd1, X_OK) == 0)
+		pipex->cmd1_path = cmd1;
+	while (*env && ft_strncmp(*env, "PATH=", 5) != 0)
+		env++;
 }
 
 void exctract_args_one(char *cmd, t_pipex *pipex)
