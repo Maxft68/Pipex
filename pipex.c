@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   pipex.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
+/*   By: maxoph <maxoph@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/14 19:15:07 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/15 16:49:06 by maxoph           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,35 +41,145 @@ int	main(int argc, char **argv, char **env)
 		return (1);
 	}
 	initialize(&pipex);
+	if (pipe(pipex.pipe_fd) == -1)
+		return (perror("pipe"), 1);
+	pipex.pid1 = fork();
+	if (pipex.pid1 == 0)
+		child_one_do(argv[1], argv[2], &pipex, env);
+	pipex.pid2 = fork();
+	if (pipex.pid2 == 0)
+		child_two_do(argv[4], argv[3], &pipex, env);
 	debug_print_pipex(&pipex);
 	return (0);
 }
-void verif_access(t_pipex *pipex)
+
+void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 {
-	char *name;
-	name = pipex->infile;
-	if (access(name, F_OK) == -1)
+	open_file_in(name, pipex);
+	if (dup2(pipex->infile_fd, STDIN_FILENO) == -1)
+		perror("dup2_stdin_child_one");
+	if (dup2(pipex->pipe_fd[1], STDOUT_FILENO) == -1)
+		perror("dup2_stdout_child_one");
+	exctract_args_one(cmd, pipex);
+	find_cmd1_path(pipex->cmd1_args[0], env);
+	
+	
+	
+}
+void find_cmd1_path(char *cmd1, char **env)
+{
+	
+}
+
+void exctract_args_one(char *cmd, t_pipex *pipex)
+{
+	pipex->cmd1_args = ft_split(cmd, ' ');
+	if (!pipex->cmd1_args || !pipex->cmd1_args[0])
 	{
-			perror("infile");
-	}
-	if (access("infile", R_OK) == -1)
-	{
-			perror("infile");
-	}
-	if (access("outfile", F_OK) == -1)
-	{
-			perror("outfile");
-	}
-	if (access("outfile", W_OK) == -1)
-	{
-			perror("outfile");
+		free_array(pipex->cmd1_args);
+		perror("cmd_one");
 	}
 }
+
+void  exctract_args_two(char *cmd, t_pipex *pipex)
+{
+	pipex->cmd2_args = ft_split(cmd, ' ');
+	if (!pipex->cmd2_args || !pipex->cmd2_args[0])
+	{
+		free_array(pipex->cmd2_args);
+		perror("cmd_two");
+	}
+}
+
+void	free_array(char **array)
+{
+	int	i;
+
+	if (!array)
+		return ;
+	i = 0;
+	while (array[i])
+	{
+		free(array[i]);
+		array[i] = NULL;
+		i++;
+	}
+	free(array);
+	array = NULL;
+	return ;
+}
+
+
+void child_two_do(char *name, char *cmd, t_pipex *pipex, char **env)
+{
+	
+}
+
+void	close_fd(t_pipex *pipex)
+{
+	if (pipex->infile_fd != -1)
+		close(pipex->infile_fd);
+	if (pipex->outfile_fd != -1)
+		close(pipex->outfile_fd);
+	if (pipex->pipe_fd[0] != -1)
+		close(pipex->pipe_fd[0]);
+	if (pipex->pipe_fd[1] != -1)
+		close(pipex->pipe_fd[1]);
+}
+
+
+void open_file_in(char *name, t_pipex *pipex)
+{
+	pipex->infile_fd = open(name, O_RDONLY);
+	if (pipex->infile_fd = -1)
+		perror("infile_fd");
+}
+void open_file_out(char *name, t_pipex *pipex)
+{
+	pipex->infile_fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (pipex->outfile_fd = -1)
+	{
+		perror("outfile_fd");
+		exit(1);
+	}
+}
+
+
+void check_infile(t_pipex *pipex)
+{
+	if (access("pipex->infile", F_OK) == -1)
+	{
+		perror("pipex->infile");
+	}
+	if (access("pipex->infile", R_OK) == -1)
+	{
+		perror("pipex->infile");
+	}
+}
+
+void check_outfile(t_pipex *pipex)
+{
+	if (access("pipex->outfile", W_OK) == -1)
+	{
+		perror("pipex->outfile");
+		//free_all
+		exit(1);
+	}
+}
+
 // F_OK = Vérifie si le fichier existe.
 // R_OK = Vérifie si le fichier est accessible en lecture.
 // W_OK = Vérifie si le fichier est accessible en écriture.
 // X_OK = Vérifie si le fichier est exécutable.
 
+// Flags de création et comportement (optionnels) :
+// O_CREAT : Crée le fichier s'il n'existe pas
+// O_EXCL : Utilisé avec O_CREAT, échoue si le fichier existe déjà
+// O_TRUNC : Si le fichier existe, le vide (supprime son contenu)
+// O_APPEND : Les écritures se font à la fin du fichier
+// O_RDONLY : Ouverture en lecture seule
+// O_WRONLY : Ouverture en écriture seule
+// O_RDWR : Ouverture en lecture et écriture
 
 // // Créer le pipe
 // pipe(pipefd);
