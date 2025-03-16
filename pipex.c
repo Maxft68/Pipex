@@ -6,7 +6,7 @@
 /*   By: maxoph <maxoph@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/16 17:48:18 by maxoph           ###   ########.fr       */
+/*   Updated: 2025/03/16 18:09:07 by maxoph           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,7 +66,7 @@ void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 	exctract_args_one(cmd, pipex); //si argv[2] = /bin/ls -la alors cmd1_args[0] = bin/ls et arg[1] = -la 
 	find_cmd1_path(pipex->cmd1_args[0], env, pipex);
 	
-	execve(pipex->cmd1_path, pipex->cmd1_args, env);
+	execve(pipex->cmd1_path, pipex->cmd1_args[1], env);
 	// si on passe ce execve alors execve a fail
 	perror("execve");
 	if (pipex->cmd1_path != pipex->cmd1_args[0])
