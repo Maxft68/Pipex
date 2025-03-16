@@ -6,7 +6,7 @@
 /*   By: maxoph <maxoph@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/15 18:32:29 by maxoph           ###   ########.fr       */
+/*   Updated: 2025/03/16 17:48:18 by maxoph           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,17 +60,93 @@ void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 		perror("dup2_stdin_child_one");
 	if (dup2(pipex->pipe_fd[1], STDOUT_FILENO) == -1)
 		perror("dup2_stdout_child_one");
-	exctract_args_one(cmd, pipex);
+	close(pipex->infile_fd);
+	close(pipex->pipe_fd[0]); // cote lecture du pipe
+	close(pipex->pipe_fd[1]); // dup2 l'a mis en stdout
+	exctract_args_one(cmd, pipex); //si argv[2] = /bin/ls -la alors cmd1_args[0] = bin/ls et arg[1] = -la 
 	find_cmd1_path(pipex->cmd1_args[0], env, pipex);
 	
+	execve(pipex->cmd1_path, pipex->cmd1_args, env);
+	// si on passe ce execve alors execve a fail
+	perror("execve");
+	if (pipex->cmd1_path != pipex->cmd1_args[0])
+		free(pipex->cmd1_path);
+	free_array(pipex->cmd1_args);
+	exit(1);
 }
 void find_cmd1_path(char *cmd1, char **env, t_pipex *pipex)
 {
-	if (ft_strchr(cmd1, '/') && access(cmd1, X_OK) == 0)
-		pipex->cmd1_path = cmd1;
-	while (*env && ft_strncmp(*env, "PATH=", 5) != 0)
-		env++;
+	int i;
+	i = 0;
+	char **paths;
+	test_path(cmd1, pipex);
+	if (pipex->cmd1_path != NULL) // si le chemin est deja donner alors plus besoin de le chercher
+		return;
+	while (env[i] && ft_strncmp(env[i], "PATH=", 5) != 0)
+		i++;
+	if (!env[i])
+	{
+		ft_putstr_fd(cmd1, 2);
+		ft_putstr_fd(": command not found\n", 2);
+		exit(127);
+	}
+	paths = ft_split(env[i] + 5, ':');
+	if (!paths)
+	{
+		perror("malloc");
+		exit(1);
+	}
+	join_path(paths, pipex);
 }
+
+void join_path(char **paths, t_pipex *pipex)
+{
+	int i;
+	i = 0;
+	while (paths[i])
+	{
+		pipex->cmd1_path = ft_strjoin3(paths[i], "/", pipex->cmd1_args[0]);
+		if (acces(pipex->cmd1_path, X_OK) == 0)
+		{
+			free_array(paths);
+			return;
+		}
+		pipex->cmd1_path = NULL;
+		i++;
+	}
+	ft_putstr_fd("Command not found", 2);
+	exit(127);
+}
+
+void test_path(char *cmd1, t_pipex *pipex)
+{
+	if (ft_strchr(cmd1, '/'))
+	{
+		if (acces(cmd1, X_OK) == 0) // reussi
+		{
+			pipex->cmd1_path = cmd1;
+			return ;
+		}
+		else
+		{
+			perror("cmd1");
+			exit(1);
+		}
+	}
+	return ;
+}
+
+char	*ft_strjoin3(char *s1, char *s2, char *s3)
+{
+	char *s4;
+	char *s5;
+	
+	s4 = ft_strjoin(s1, s2);
+	s5 = ft_strjoin(s4, s3);
+	
+	return(s4);
+}
+
 
 void exctract_args_one(char *cmd, t_pipex *pipex)
 {
@@ -79,6 +155,7 @@ void exctract_args_one(char *cmd, t_pipex *pipex)
 	{
 		free_array(pipex->cmd1_args);
 		perror("cmd_one");
+		exit(1);
 	}
 }
 
@@ -89,6 +166,7 @@ void  exctract_args_two(char *cmd, t_pipex *pipex)
 	{
 		free_array(pipex->cmd2_args);
 		perror("cmd_two");
+		exit(1);
 	}
 }
 
@@ -132,15 +210,18 @@ void	close_fd(t_pipex *pipex)
 void open_file_in(char *name, t_pipex *pipex)
 {
 	pipex->infile_fd = open(name, O_RDONLY);
-	if (pipex->infile_fd = -1)
-		perror("infile_fd");
+	if (pipex->infile_fd == -1)
+	{
+		perror(name);
+		exit(1);
+	}
 }
 void open_file_out(char *name, t_pipex *pipex)
 {
-	pipex->infile_fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (pipex->outfile_fd = -1)
+	pipex->outfile_fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (pipex->outfile_fd == -1)
 	{
-		perror("outfile_fd");
+		perror(name);
 		exit(1);
 	}
 }
