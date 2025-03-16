@@ -6,7 +6,7 @@
 /*   By: maxoph <maxoph@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/16 18:09:07 by maxoph           ###   ########.fr       */
+/*   Updated: 2025/03/16 21:51:18 by maxoph           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,6 +133,7 @@ void test_path(char *cmd1, t_pipex *pipex)
 			exit(1);
 		}
 	}
+	
 	return ;
 }
 
@@ -150,12 +151,27 @@ char	*ft_strjoin3(char *s1, char *s2, char *s3)
 
 void exctract_args_one(char *cmd, t_pipex *pipex)
 {
-	pipex->cmd1_args = ft_split(cmd, ' ');
-	if (!pipex->cmd1_args || !pipex->cmd1_args[0])
+	if (ft_strchr(cmd, '/'))
 	{
-		free_array(pipex->cmd1_args);
-		perror("cmd_one");
-		exit(1);
+		char **args;
+		char **split_args;
+		
+		args = ft_split(cmd, ' ');
+		if (!args || !args[0])
+		{
+			free_array(args);
+			perror("cmd_one");
+			exit(1);
+		}
+		split_args = ft_split(args[0], '/');
+		int i;
+		i = 0;
+		while(split_args[i + 1])
+			i++;
+		pipex->cmd1_args[0] = ft_strdup(split_args[i]);
+		free_array(split_args);
+		if (args[1])
+			pipex->cmd1_args[1] = args[1];
 	}
 }
 
