@@ -3,27 +3,27 @@
 /*                                                        :::      ::::::::   */
 /*   pipex.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: maxoph <maxoph@student.42.fr>              +#+  +:+       +#+        */
+/*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/16 21:51:18 by maxoph           ###   ########.fr       */
+/*   Updated: 2025/03/17 23:43:26 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-void initialize(t_pipex *pipex)
+void initialize(t_pipex *pipex, char **argv)
 {
-	pipex->infile = NULL;
+	pipex->infile = argv[1];
+	pipex->outfile = argv[4];
 	pipex->infile_fd = -1;
-	pipex->outfile = NULL;
 	pipex->outfile_fd = -1;
 	pipex->cmd1_args = NULL;
 	pipex->cmd2_args = NULL;
 	pipex->cmd1_path = NULL;
 	pipex->cmd2_path = NULL;
-	pipex->pipe_fd[0] = -1;// Descripteurs du pipe [0]=lecture, [1]=écriture
-	pipex->pipe_fd[1] = -1;// Descripteurs du pipe [0]=lecture, [1]=écriture
+	pipex->pipe_fd[0] = -1;
+	pipex->pipe_fd[1] = -1;
 	pipex->pid1 = -1;
 	pipex->pid2 = -1;
 }
@@ -36,11 +36,8 @@ int	main(int argc, char **argv, char **env)
 		return (1);
 	(void)argv;
 	if (argc != 5)
-	{
-		ft_putstr_fd("Usage: ./pipex infile cmd1 cmd2 outfile\n", 2);
-		return (1);
-	}
-	initialize(&pipex);
+		return (ft_putstr_fd("Use: ./pipex infile cmd1 cmd2 outfile\n", 2), 1);
+	initialize(&pipex, argv);
 	if (pipe(pipex.pipe_fd) == -1)
 		return (perror("pipe"), 1);
 	pipex.pid1 = fork();
@@ -49,8 +46,13 @@ int	main(int argc, char **argv, char **env)
 	pipex.pid2 = fork();
 	if (pipex.pid2 == 0)
 		child_two_do(argv[4], argv[3], &pipex, env);
-	debug_print_pipex(&pipex);
-	return (0);
+	close_fd(&pipex);
+	int status;
+	waitpid(pipex.pid1, NULL, 0);
+	waitpid(pipex.pid2, &status, 0);
+	if (WIFEXITED(status))
+		return WEXITSTATUS(status);
+	return 1;
 }
 
 void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
@@ -60,33 +62,68 @@ void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 		perror("dup2_stdin_child_one");
 	if (dup2(pipex->pipe_fd[1], STDOUT_FILENO) == -1)
 		perror("dup2_stdout_child_one");
-	close(pipex->infile_fd);
-	close(pipex->pipe_fd[0]); // cote lecture du pipe
-	close(pipex->pipe_fd[1]); // dup2 l'a mis en stdout
-	exctract_args_one(cmd, pipex); //si argv[2] = /bin/ls -la alors cmd1_args[0] = bin/ls et arg[1] = -la 
-	find_cmd1_path(pipex->cmd1_args[0], env, pipex);
-	
-	execve(pipex->cmd1_path, pipex->cmd1_args[1], env);
-	// si on passe ce execve alors execve a fail
+	close_fd(pipex);
+	if (ft_strchr(cmd, '/'))
+	{
+		exctract_args_address_one(cmd, pipex);
+		if (access(pipex->cmd1_path, X_OK) != 0)
+		{
+			perror(*pipex->cmd1_args);
+			free_array(pipex->cmd1_args);
+			free(pipex->cmd1_path);
+			exit(1);
+		}
+	}
+	if (!pipex->cmd1_path)
+		find_cmd1_path(cmd, env, pipex);
+	execve(pipex->cmd1_path, pipex->cmd1_args, env);
 	perror("execve");
 	if (pipex->cmd1_path != pipex->cmd1_args[0])
 		free(pipex->cmd1_path);
 	free_array(pipex->cmd1_args);
 	exit(1);
 }
-void find_cmd1_path(char *cmd1, char **env, t_pipex *pipex)
+
+void child_two_do(char *name, char *cmd, t_pipex *pipex, char **env)
+{
+	open_file_out(name, pipex);
+	if (dup2(pipex->pipe_fd[0], STDIN_FILENO) == -1)
+		perror("dup2_stdin_child_two");
+	if (dup2(pipex->outfile_fd, STDOUT_FILENO) == -1)
+		perror("dup2_stdout_child_two");
+	close_fd(pipex);
+	if (ft_strchr(cmd, '/'))
+	{
+		exctract_args_address_two(cmd, pipex);
+		if (access(pipex->cmd2_path, X_OK) != 0)
+		{
+			perror(*pipex->cmd2_args);
+			free_array(pipex->cmd2_args);
+			free(pipex->cmd2_path);
+			exit(1);
+		}
+	}
+	if (!pipex->cmd2_path)
+		find_cmd2_path(cmd, env, pipex);
+	execve(pipex->cmd2_path, pipex->cmd2_args, env);
+	perror("execve");
+	if (pipex->cmd2_path != pipex->cmd2_args[0])
+		free(pipex->cmd2_path);
+	free_array(pipex->cmd2_args);
+	exit(1);
+}
+
+void find_cmd1_path(char *args1, char **env, t_pipex *pipex)
 {
 	int i;
-	i = 0;
 	char **paths;
-	test_path(cmd1, pipex);
-	if (pipex->cmd1_path != NULL) // si le chemin est deja donner alors plus besoin de le chercher
-		return;
+	
+	i = 0;
 	while (env[i] && ft_strncmp(env[i], "PATH=", 5) != 0)
 		i++;
 	if (!env[i])
 	{
-		ft_putstr_fd(cmd1, 2);
+		ft_putstr_fd(args1, 2);
 		ft_putstr_fd(": command not found\n", 2);
 		exit(127);
 	}
@@ -96,46 +133,81 @@ void find_cmd1_path(char *cmd1, char **env, t_pipex *pipex)
 		perror("malloc");
 		exit(1);
 	}
-	join_path(paths, pipex);
+	pipex->cmd1_args = ft_split(args1, ' ');
+	join_path_one(paths, pipex);
 }
 
-void join_path(char **paths, t_pipex *pipex)
+void	find_cmd2_path(char *args2, char **env, t_pipex *pipex)
+{
+	int i;
+	char **paths;
+	
+	i = 0;
+	while (env[i] && ft_strncmp(env[i], "PATH=", 5) != 0)
+		i++;
+	if (!env[i])
+	{
+		ft_putstr_fd(args2, 2);
+		ft_putstr_fd(": command not found\n", 2);
+		ft_putstr_fd("\n", 2);
+		exit(127);
+	}
+	paths = ft_split(env[i] + 5, ':');
+	if (!paths)
+	{
+		perror("malloc");
+		exit(1);
+	}
+	pipex->cmd2_args = ft_split(args2, ' ');
+	join_path_two(paths, pipex);
+}
+
+void join_path_one(char **paths, t_pipex *pipex)
 {
 	int i;
 	i = 0;
 	while (paths[i])
 	{
+		free(pipex->cmd1_path);
 		pipex->cmd1_path = ft_strjoin3(paths[i], "/", pipex->cmd1_args[0]);
-		if (acces(pipex->cmd1_path, X_OK) == 0)
+		if (access(pipex->cmd1_path, X_OK) == 0)
 		{
 			free_array(paths);
 			return;
 		}
-		pipex->cmd1_path = NULL;
 		i++;
 	}
-	ft_putstr_fd("Command not found", 2);
+	ft_putstr_fd(*pipex->cmd1_args, 2);
+	ft_putstr_fd(": command not found\n", 2);
+	free_array(paths);
+	free_array(pipex->cmd1_args);
+	free(pipex->cmd1_path);
 	exit(127);
 }
 
-void test_path(char *cmd1, t_pipex *pipex)
+void	join_path_two(char **paths, t_pipex *pipex)
 {
-	if (ft_strchr(cmd1, '/'))
+	int i;
+	i = 0;
+	while (paths[i])
 	{
-		if (acces(cmd1, X_OK) == 0) // reussi
+		free(pipex->cmd2_path);
+		pipex->cmd2_path = ft_strjoin3(paths[i], "/", pipex->cmd2_args[0]);
+		if (access(pipex->cmd2_path, X_OK) == 0)
 		{
-			pipex->cmd1_path = cmd1;
-			return ;
+			free_array(paths);
+			return;
 		}
-		else
-		{
-			perror("cmd1");
-			exit(1);
-		}
+		i++;
 	}
-	
-	return ;
+	ft_putstr_fd(*pipex->cmd2_args, 2);
+	ft_putstr_fd(": command not found\n", 2);
+	free_array(paths);
+	free_array(pipex->cmd2_args);
+	free(pipex->cmd2_path);
+	exit(127);
 }
+
 
 char	*ft_strjoin3(char *s1, char *s2, char *s3)
 {
@@ -144,46 +216,68 @@ char	*ft_strjoin3(char *s1, char *s2, char *s3)
 	
 	s4 = ft_strjoin(s1, s2);
 	s5 = ft_strjoin(s4, s3);
+	free(s4);
 	
-	return(s4);
+	return(s5);
 }
 
 
-void exctract_args_one(char *cmd, t_pipex *pipex)
+void	exctract_args_address_one(char *cmd, t_pipex *pipex)
 {
-	if (ft_strchr(cmd, '/'))
+	int i;
+	char **args;
+	char **split_args;
+	
+	i = 0;
+	args = ft_split(cmd, ' ');
+	if (!args || !args[0])
 	{
-		char **args;
-		char **split_args;
-		
-		args = ft_split(cmd, ' ');
-		if (!args || !args[0])
-		{
-			free_array(args);
-			perror("cmd_one");
-			exit(1);
-		}
-		split_args = ft_split(args[0], '/');
-		int i;
-		i = 0;
-		while(split_args[i + 1])
-			i++;
-		pipex->cmd1_args[0] = ft_strdup(split_args[i]);
-		free_array(split_args);
-		if (args[1])
-			pipex->cmd1_args[1] = args[1];
-	}
-}
-
-void  exctract_args_two(char *cmd, t_pipex *pipex)
-{
-	pipex->cmd2_args = ft_split(cmd, ' ');
-	if (!pipex->cmd2_args || !pipex->cmd2_args[0])
-	{
-		free_array(pipex->cmd2_args);
-		perror("cmd_two");
+		free_array(args);
+		perror(cmd);
 		exit(1);
 	}
+	pipex->cmd1_path = ft_strdup(args[0]);
+	split_args = ft_split(args[0], '/');
+	while(split_args[i + 1])
+	i++;
+	pipex->cmd1_args = ft_split(cmd, ' ');
+	free(pipex->cmd1_args[0]);
+	pipex->cmd1_args[0] = ft_strdup(split_args[i]);
+	free_array(split_args);
+	if (args[1])
+	{
+		pipex->cmd1_args[1] = ft_strdup(args[1]);
+	}
+	free_array(args);
+}
+
+void  exctract_args_address_two(char *cmd, t_pipex *pipex)
+{
+	int i;
+	char **args;
+	char **split_args;
+	
+	i = 0;
+	args = ft_split(cmd, ' ');
+	if (!args || !args[0])
+	{
+		free_array(args);
+		perror(cmd);
+		exit(1);
+	}
+	pipex->cmd2_path = ft_strdup(args[0]);
+	split_args = ft_split(args[0], '/');
+	while(split_args[i + 1])
+	i++;
+	pipex->cmd2_args = ft_split(cmd, ' ');
+	free(pipex->cmd2_args[0]);
+	pipex->cmd2_args[0] = ft_strdup(split_args[i]);
+	free_array(split_args);
+	if (args[1])
+	{
+		pipex->cmd2_args[1] = ft_strdup(args[1]);
+	}
+	free_array(args);
 }
 
 void	free_array(char **array)
@@ -191,7 +285,7 @@ void	free_array(char **array)
 	int	i;
 
 	if (!array)
-		return ;
+	return ;
 	i = 0;
 	while (array[i])
 	{
@@ -202,12 +296,6 @@ void	free_array(char **array)
 	free(array);
 	array = NULL;
 	return ;
-}
-
-
-void child_two_do(char *name, char *cmd, t_pipex *pipex, char **env)
-{
-	
 }
 
 void	close_fd(t_pipex *pipex)
@@ -225,6 +313,12 @@ void	close_fd(t_pipex *pipex)
 
 void open_file_in(char *name, t_pipex *pipex)
 {
+	if (pipex->infile && access(pipex->infile, F_OK | R_OK) == -1)
+	{
+		perror(pipex->infile);
+		close_fd(pipex);
+		exit(127);
+	}
 	pipex->infile_fd = open(name, O_RDONLY);
 	if (pipex->infile_fd == -1)
 	{
@@ -238,29 +332,7 @@ void open_file_out(char *name, t_pipex *pipex)
 	if (pipex->outfile_fd == -1)
 	{
 		perror(name);
-		exit(1);
-	}
-}
-
-
-void check_infile(t_pipex *pipex)
-{
-	if (access("pipex->infile", F_OK) == -1)
-	{
-		perror("pipex->infile");
-	}
-	if (access("pipex->infile", R_OK) == -1)
-	{
-		perror("pipex->infile");
-	}
-}
-
-void check_outfile(t_pipex *pipex)
-{
-	if (access("pipex->outfile", W_OK) == -1)
-	{
-		perror("pipex->outfile");
-		//free_all
+		close_fd(pipex);
 		exit(1);
 	}
 }
@@ -279,41 +351,6 @@ void check_outfile(t_pipex *pipex)
 // O_WRONLY : Ouverture en écriture seule
 // O_RDWR : Ouverture en lecture et écriture
 
-// // Créer le pipe
-// pipe(pipefd);
-
-// // Premier fork
-// pid1 = fork();
-// if (pid1 == 0)
-// {
-// 	// Code du premier enfant
-// 	// ...
-// 	// fermer tout les pipes
-// 	execve(path, args, env);
-// 	// Si on arrive ici, c'est que execve a échoué
-// 	perror("execve");
-// 	exit(127) //EXIT_FAILURE);
-// }
-
-// // Second fork
-// pid2 = fork();
-// if (pid2 == 0)
-// {
-// 	// Code du second enfant
-// 	// ...
-// 	// fermer tout les pipes
-// 	exit(0);
-// }
-
-// // Maintenant que les deux enfants sont créés, le parent peut fermer le pipe
-// close(pipefd[0]);
-// close(pipefd[1]);
-
-// // Attendre les enfants
-// waitpid(pid1, NULL, 0);
-// waitpid(pid2, NULL, 0);
-
-
 
 // exit(127);
 // 0 : succès
@@ -327,53 +364,3 @@ void check_outfile(t_pipex *pipex)
 // {
 // 	perror(pipex.infile);  // Affiche l'erreur
 // }
-
-
-// if (pid1 == 0) {
-// 	// Ouvrir le fichier d'entrée
-// 	infile_fd = open(infile, O_RDONLY);
-	
-// 	// Configurer les redirections
-// 	dup2(infile_fd, STDIN_FILENO);
-// 	dup2(pipe_fd[1], STDOUT_FILENO);
-	
-// 	// Fermer les descripteurs devenus inutiles
-// 	close(infile_fd);
-// 	close(pipe_fd[0]); // Extrémité de lecture non utilisée
-// 	close(pipe_fd[1]); // Déjà dupliqué vers STDOUT_FILENO
-	
-// 	// Exécuter la commande
-// 	execve(...);
-// }
-// dup2(old_fd, new_fd) fait que new_fd devient une copie de old_fd. Si new_fd était déjà ouvert, il est d'abord fermé.
-
-// lancer une commande simple avec juste infile
-// dabord trouver le chemin, le mettre dans acces pour verifier puis execve pour lexecuter
-
-// 1. initialiser la struct avec malloc
-// 2. fonction qui construit mes commandes, trouver arguments, et trouver cmd pathconf
-// 3. execution processus enfant 1 
-// 4. execution precessus enfant 2
-// 5. waitpid dans le processus parent les 2 enfants 
-
-// Premier enfant (cmd1):                  Second enfant (cmd2):
-// +-------------------+                   +-------------------+
-// |                   |                   |                   |
-// | stdin <- infile   |                   | stdin <- pipe[0]  |
-// | stdout -> pipe[1] |                   | stdout -> outfile |
-// |                   |                   |                   |
-// +-------------------+                   +-------------------+
-// 	 |                                        ^
-// 	 |                                        |
-// 	 +----------------------------------------+
-// 			flux de données via le pipe
-// infile -> premier enfant -> pipe[1] (écriture) -> pipe[0] (lecture) -> deuxième enfant -> outfile
-
-// dup2(pipex.infile_fd, STDIN_FILENO) fait que l'entrée standard (stdin, fd 0) devient une copie du fichier d'entrée.
-// dup2(pipex.pipe_fd[1], STDOUT_FILENO) fait que la sortie standard (stdout, fd 1) devient une copie de l'extrémité d'écriture du pipe.
-
-
-
-
-
-
