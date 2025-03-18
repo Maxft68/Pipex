@@ -6,7 +6,7 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/07 16:14:33 by maxoph            #+#    #+#             */
-/*   Updated: 2025/03/17 23:43:26 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 01:14:27 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,112 +55,6 @@ int	main(int argc, char **argv, char **env)
 	return 1;
 }
 
-void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
-{
-	open_file_in(name, pipex);
-	if (dup2(pipex->infile_fd, STDIN_FILENO) == -1)
-		perror("dup2_stdin_child_one");
-	if (dup2(pipex->pipe_fd[1], STDOUT_FILENO) == -1)
-		perror("dup2_stdout_child_one");
-	close_fd(pipex);
-	if (ft_strchr(cmd, '/'))
-	{
-		exctract_args_address_one(cmd, pipex);
-		if (access(pipex->cmd1_path, X_OK) != 0)
-		{
-			perror(*pipex->cmd1_args);
-			free_array(pipex->cmd1_args);
-			free(pipex->cmd1_path);
-			exit(1);
-		}
-	}
-	if (!pipex->cmd1_path)
-		find_cmd1_path(cmd, env, pipex);
-	execve(pipex->cmd1_path, pipex->cmd1_args, env);
-	perror("execve");
-	if (pipex->cmd1_path != pipex->cmd1_args[0])
-		free(pipex->cmd1_path);
-	free_array(pipex->cmd1_args);
-	exit(1);
-}
-
-void child_two_do(char *name, char *cmd, t_pipex *pipex, char **env)
-{
-	open_file_out(name, pipex);
-	if (dup2(pipex->pipe_fd[0], STDIN_FILENO) == -1)
-		perror("dup2_stdin_child_two");
-	if (dup2(pipex->outfile_fd, STDOUT_FILENO) == -1)
-		perror("dup2_stdout_child_two");
-	close_fd(pipex);
-	if (ft_strchr(cmd, '/'))
-	{
-		exctract_args_address_two(cmd, pipex);
-		if (access(pipex->cmd2_path, X_OK) != 0)
-		{
-			perror(*pipex->cmd2_args);
-			free_array(pipex->cmd2_args);
-			free(pipex->cmd2_path);
-			exit(1);
-		}
-	}
-	if (!pipex->cmd2_path)
-		find_cmd2_path(cmd, env, pipex);
-	execve(pipex->cmd2_path, pipex->cmd2_args, env);
-	perror("execve");
-	if (pipex->cmd2_path != pipex->cmd2_args[0])
-		free(pipex->cmd2_path);
-	free_array(pipex->cmd2_args);
-	exit(1);
-}
-
-void find_cmd1_path(char *args1, char **env, t_pipex *pipex)
-{
-	int i;
-	char **paths;
-	
-	i = 0;
-	while (env[i] && ft_strncmp(env[i], "PATH=", 5) != 0)
-		i++;
-	if (!env[i])
-	{
-		ft_putstr_fd(args1, 2);
-		ft_putstr_fd(": command not found\n", 2);
-		exit(127);
-	}
-	paths = ft_split(env[i] + 5, ':');
-	if (!paths)
-	{
-		perror("malloc");
-		exit(1);
-	}
-	pipex->cmd1_args = ft_split(args1, ' ');
-	join_path_one(paths, pipex);
-}
-
-void	find_cmd2_path(char *args2, char **env, t_pipex *pipex)
-{
-	int i;
-	char **paths;
-	
-	i = 0;
-	while (env[i] && ft_strncmp(env[i], "PATH=", 5) != 0)
-		i++;
-	if (!env[i])
-	{
-		ft_putstr_fd(args2, 2);
-		ft_putstr_fd(": command not found\n", 2);
-		ft_putstr_fd("\n", 2);
-		exit(127);
-	}
-	paths = ft_split(env[i] + 5, ':');
-	if (!paths)
-	{
-		perror("malloc");
-		exit(1);
-	}
-	pipex->cmd2_args = ft_split(args2, ' ');
-	join_path_two(paths, pipex);
-}
 
 void join_path_one(char **paths, t_pipex *pipex)
 {
@@ -189,7 +83,7 @@ void	join_path_two(char **paths, t_pipex *pipex)
 {
 	int i;
 	i = 0;
-	while (paths[i])
+	while (*paths && paths[i])
 	{
 		free(pipex->cmd2_path);
 		pipex->cmd2_path = ft_strjoin3(paths[i], "/", pipex->cmd2_args[0]);
@@ -336,31 +230,3 @@ void open_file_out(char *name, t_pipex *pipex)
 		exit(1);
 	}
 }
-
-// F_OK = Vérifie si le fichier existe.
-// R_OK = Vérifie si le fichier est accessible en lecture.
-// W_OK = Vérifie si le fichier est accessible en écriture.
-// X_OK = Vérifie si le fichier est exécutable.
-
-// Flags de création et comportement (optionnels) :
-// O_CREAT : Crée le fichier s'il n'existe pas
-// O_EXCL : Utilisé avec O_CREAT, échoue si le fichier existe déjà
-// O_TRUNC : Si le fichier existe, le vide (supprime son contenu)
-// O_APPEND : Les écritures se font à la fin du fichier
-// O_RDONLY : Ouverture en lecture seule
-// O_WRONLY : Ouverture en écriture seule
-// O_RDWR : Ouverture en lecture et écriture
-
-
-// exit(127);
-// 0 : succès
-// 1 : erreur générale
-// 126 : commande trouvée mais non exécutable
-// 127 ; command not found
-// 130 : programme interrompu par CTRL+C
-
-// pipex.infile_fd = open(pipex.infile, O_RDONLY);
-// if (pipex.infile_fd == -1) // Si le fichier dentree nexiste pas 
-// {
-// 	perror(pipex.infile);  // Affiche l'erreur
-// }
