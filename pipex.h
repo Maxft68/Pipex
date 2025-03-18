@@ -6,7 +6,7 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/14 14:32:30 by mdsiurds          #+#    #+#             */
-/*   Updated: 2025/03/17 23:46:28 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 14:05:24 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,5 +51,6 @@ void	open_file_in(char *name, t_pipex *pipex);
 void	open_file_out(char *name, t_pipex *pipex);
 void	free_array(char **array);
 void	close_fd(t_pipex *pipex);
+void	acces_fail(t_pipex *pipex);
 
 #endif

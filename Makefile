@@ -6,12 +6,13 @@
 #    By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/14 13:52:45 by mdsiurds          #+#    #+#              #
-#    Updated: 2025/03/18 11:53:28 by mdsiurds         ###   ########.fr        #
+#    Updated: 2025/03/18 14:23:42 by mdsiurds         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = pipex
-SRC = pipex.c	children_do.c	find_paths.c	extract_args.c	
+SRC = pipex.c	children_do.c	find_paths.c	extract_args.c \
+clear_free_exit.c	open.c	strjoin_three.c
 OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
 OBJ_DIR = ./temp
 CC = cc
