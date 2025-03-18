@@ -6,21 +6,21 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/14 14:32:30 by mdsiurds          #+#    #+#             */
-/*   Updated: 2025/03/18 17:26:44 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 18:17:32 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef PIPEX_H
 # define PIPEX_H
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/wait.h>
 # include "./libft/libft/libft.h"
 # include "./libft/printf/ft_printf.h"
+# include <errno.h>
+# include <fcntl.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <sys/wait.h>
+# include <unistd.h>
 
 typedef struct s_pipex
 {
@@ -37,20 +37,20 @@ typedef struct s_pipex
 	int		pid2;
 }			t_pipex;
 
-void	initialize(t_pipex *pipex, char **argv);
-void	child_one_do(char *name, char *cmd, t_pipex *pipex, char **env);
-void	child_two_do(char *name, char *cmd, t_pipex *pipex, char **env);
-void	find_cmd1_path(char *args1, char **env, t_pipex *pipex);
-void	find_cmd2_path(char *args2, char **env, t_pipex *pipex);
-void	join_path_one(char **paths, t_pipex *pipex);
-void	join_path_two(char **paths, t_pipex *pipex);
-char	*ft_strjoin3(char *s1, char *s2, char *s3);
-void	exctract_args_address_one(char *cmd, t_pipex *pipex);
-void	exctract_args_address_two(char *cmd, t_pipex *pipex);
-void	open_file_in(char *name, t_pipex *pipex);
-void	open_file_out(char *name, t_pipex *pipex);
-void	free_array(char **array);
-void	close_fd(t_pipex *pipex);
-void	acces_fail(t_pipex *pipex);
+void		initialize(t_pipex *pipex, char **argv);
+void		child_one_do(char *name, char *cmd, t_pipex *pipex, char **env);
+void		child_two_do(char *name, char *cmd, t_pipex *pipex, char **env);
+void		find_cmd1_path(char *args1, char **env, t_pipex *pipex);
+void		find_cmd2_path(char *args2, char **env, t_pipex *pipex);
+void		join_path_one(char **paths, t_pipex *pipex);
+void		join_path_two(char **paths, t_pipex *pipex);
+char		*ft_strjoin3(char *s1, char *s2, char *s3);
+void		exctract_args_address_one(char *cmd, t_pipex *pipex);
+void		exctract_args_address_two(char *cmd, t_pipex *pipex);
+void		open_file_in(char *name, t_pipex *pipex);
+void		open_file_out(char *name, t_pipex *pipex);
+void		free_array(char **array);
+void		close_fd(t_pipex *pipex);
+void		acces_fail(t_pipex *pipex);
 
 #endif
