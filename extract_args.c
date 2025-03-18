@@ -6,7 +6,7 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 11:48:14 by mdsiurds          #+#    #+#             */
-/*   Updated: 2025/03/18 15:21:37 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 17:26:29 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ void	exctract_args_address_one(char *cmd, t_pipex *pipex)
 	}
 	pipex->cmd1_path = ft_strdup(args[0]);
 	split_args = ft_split(args[0], '/');
+	
 	while(split_args[i + 1])
 		i++;
 	pipex->cmd1_args = ft_split(cmd, ' ');

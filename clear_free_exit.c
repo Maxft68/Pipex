@@ -6,7 +6,7 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 14:09:35 by mdsiurds          #+#    #+#             */
-/*   Updated: 2025/03/18 14:16:23 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 17:32:10 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@ void acces_fail(t_pipex *pipex)
 	perror(*pipex->cmd1_args);
 	free_array(pipex->cmd1_args);
 	free(pipex->cmd1_path);
+	close_fd(pipex);
 	exit(1);
 }
 

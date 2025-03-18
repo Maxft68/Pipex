@@ -6,7 +6,7 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/18 14:17:23 by mdsiurds          #+#    #+#             */
-/*   Updated: 2025/03/18 14:17:43 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 17:38:01 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ void open_file_in(char *name, t_pipex *pipex)
 	if (pipex->infile_fd == -1)
 	{
 		perror(name);
+		close_fd(pipex);
 		exit(1);
 	}
 }
