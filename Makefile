@@ -6,12 +6,12 @@
 #    By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/14 13:52:45 by mdsiurds          #+#    #+#              #
-#    Updated: 2025/03/18 00:55:52 by mdsiurds         ###   ########.fr        #
+#    Updated: 2025/03/18 11:53:28 by mdsiurds         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = pipex
-SRC = pipex.c	children_do.c	find_paths.c
+SRC = pipex.c	children_do.c	find_paths.c	extract_args.c	
 OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
 OBJ_DIR = ./temp
 CC = cc

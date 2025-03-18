@@ -6,7 +6,7 @@
 /*   By: mdsiurds <mdsiurds@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/17 23:55:24 by mdsiurds          #+#    #+#             */
-/*   Updated: 2025/03/18 01:42:49 by mdsiurds         ###   ########.fr       */
+/*   Updated: 2025/03/18 12:55:52 by mdsiurds         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,9 @@ void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 	if (dup2(pipex->pipe_fd[1], STDOUT_FILENO) == -1)
 		perror("dup2_stdout_child_one");
 	close_fd(pipex);
-	if (ft_strchr(cmd, '/'))
+	char **cmd_split = ft_split(cmd, ' ');
+	
+	if (ft_strchr(cmd_split[0], '/'))
 	{
 		exctract_args_address_one(cmd, pipex);
 		if (access(pipex->cmd1_path, X_OK) != 0)
@@ -35,6 +37,8 @@ void child_one_do(char *name, char *cmd, t_pipex *pipex, char **env)
 	}
 	if (!pipex->cmd1_path)
 		find_cmd1_path(cmd, env, pipex);
+	ft_putstr_fd(pipex->cmd1_path, 2);
+	ft_putstr_fd(*pipex->cmd1_args, 2);
 	execve(pipex->cmd1_path, pipex->cmd1_args, env);
 	perror("execve");
 	if (pipex->cmd1_path != pipex->cmd1_args[0])
