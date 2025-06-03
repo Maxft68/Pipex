@@ -1,0 +1,9 @@
+{
+	"makefile.launchConfigurations": [
+		{
+			"cwd": "/home/mdsiurds/C/Stud/pipex",
+			"binaryPath": "/home/mdsiurds/C/Stud/pipex/pipex",
+			"binaryArgs": []
+		}
+	]
+}
